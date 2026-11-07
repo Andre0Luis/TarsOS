@@ -71,10 +71,12 @@ BLOCK = [
 ]
 SAFE = {'ls', 'cat', 'head', 'tail', 'df', 'du', 'free', 'uptime', 'uname', 'whoami', 'id', 'date', 'ps', 'top', 'ip',
         'ifconfig', 'ping', 'nslookup', 'dig', 'host', 'traceroute', 'tracepath', 'nmcli', 'iw', 'iwconfig', 'lsblk',
-        'grep', 'egrep', 'fgrep', 'awk', 'wc', 'sort', 'uniq', 'echo', 'which', 'pwd', 'hostname', 'cut', 'tr', 'stat',
-        'file', 'lsusb', 'nproc', 'arp', 'netstat', 'ss', 'route', 'getent', 'basename', 'dirname', 'sed', 'find',
-        'apk', 'curl', 'wget', 'true', 'printf', 'seq', 'tee', 'ntpq', 'chronyc', 'amixer', 'aplay', 'arecord', 'rc-status',
-        'rc-service', 'cat', 'less', 'more', 'readlink', 'realpath', 'xargs', 'tr', 'paste', 'rev', 'nl', 'diff', 'cmp'}
+        'grep', 'egrep', 'fgrep', 'wc', 'sort', 'uniq', 'echo', 'which', 'pwd', 'hostname', 'cut', 'tr', 'stat',
+        'file', 'lsusb', 'nproc', 'arp', 'netstat', 'ss', 'route', 'getent', 'basename', 'dirname', 'find',
+        'apk', 'curl', 'wget', 'true', 'printf', 'seq', 'tee', 'ntpq', 'chronyc', 'amixer', 'rc-status',
+        'rc-service', 'cat', 'readlink', 'realpath', 'paste', 'rev', 'nl', 'diff', 'cmp'}
+# Fora da lista de propósito (executam ou escrevem sozinhos): awk (system/pipes), sed (e/w), xargs, less/more (shell),
+# aplay/arecord (escrita direta no PCM derruba o kernel da MediaTek; arecord grava arquivo).
 SAFE_ARGS = {                               # (subcomandos permitidos) para programas que também escrevem
     'apk': {'info', 'search', 'list', 'policy', 'version', 'stats'},
     'rc-service': {'status'},
@@ -92,8 +94,11 @@ def classify(cmd):
     for pat, why in BLOCK:
         if re.search(pat, cmd, re.I):
             return 'block', why
-    if re.search(r'[`]|\$\(|<\(|>\s*[^&\s/]|>>|&\s*$|\bnohup\b', cmd) and not re.search(r'>\s*/dev/null|2>&1', cmd):
-        return 'confirm', 'usa redirecionamento, substituição ou segundo plano'
+    # Tira só os destinos inofensivos (>/dev/null, 2>&1); qualquer outro > ou <, substituição, segundo plano (& sozinho),
+    # várias linhas ou nohup pode esconder um segundo comando ou escrever arquivo: confirma.
+    plain = re.sub(r'\d*>>?\s*/dev/null|\d*>&\d+|\d*<\s*/dev/null', ' ', cmd)
+    if re.search(r'[`<>\n\r]|\$\(|\$\{|\$\[|(?<!&)&(?!&)|\bnohup\b', plain):
+        return 'confirm', 'usa redirecionamento, substituição, segundo plano ou várias linhas'
     segs = [s for s in re.split(r'\|\||&&|;|\|', cmd) if s.strip()]
     if not segs:
         return 'confirm', 'comando vazio'
@@ -121,6 +126,10 @@ def classify(cmd):
             return 'confirm', 'find com ação'
         if prog == 'tee':
             return 'confirm', 'tee escreve em arquivo'
+        if prog == 'sort' and any(a == '--output' or a.startswith('--output=') or re.match(r'^-[A-Za-z]*o', a) for a in args):
+            return 'confirm', 'sort -o escreve em arquivo'
+        if prog == 'uniq' and len([a for a in args if not a.startswith('-')]) >= 2:
+            return 'confirm', 'uniq com arquivo de saída escreve em arquivo'
         if prog == 'top' and '-b' not in args:
             return 'confirm', 'top interativo'
         if prog == 'ping' and '-c' not in args:
