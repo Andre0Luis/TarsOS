@@ -1,0 +1,14 @@
+#!/bin/sh
+# TarsOS: AirPlay -> sox (44,1 -> 48 kHz) -> lsaudiod (mixador) -> alto-falante.
+#
+# 1) O driver da MediaTek (mtk_pcm_I2S0dl1_copy) arredonda cada escrita para múltiplos de 64 bytes
+#    e escreve além do fim do buffer se o tamanho não for múltiplo de 64 -> kernel panic. Por isso o
+#    shairport-sync NÃO fala direto com o ALSA: o aplay escreve só blocos inteiros (múltiplos de 64).
+# 2) O I2S do Echo é configurado em 48 kHz no boot; tocar 44,1 kHz direto soa mal. O sox converte
+#    com qualidade e o aplay usa exatamente os parâmetros testados: 48 kHz, período 2400, buffer 9600.
+# Encerra o encadeamento inteiro quando o serviço parar (senão sobram processos órfãos).
+trap 'trap - TERM INT EXIT; kill 0' TERM INT EXIT
+/usr/bin/shairport-sync -c /etc/shairport-sync.conf -o stdout 2>>/var/log/shairport-sync.log \
+  | /usr/bin/sox -q -t raw -r 44100 -e signed -b 16 -c 2 - -t raw -r 48000 -e signed -b 16 -c 2 - rate -m \
+  | /usr/local/bin/lsaudio-play &
+wait

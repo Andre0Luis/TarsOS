@@ -1,0 +1,12 @@
+#!/bin/sh
+# Mostra a identificação do TarsOS e o estado do sistema.
+. /etc/luizinhoshowos-release
+echo "$PRETTY_NAME"
+echo "  aparelho:   $DEVICE"
+echo "  baseado em: $BASED_ON"
+echo "  kernel:     $(uname -r) ($KERNEL)"
+echo "  bootloader: $BOOTLOADER"
+echo "  host/IP:    $(hostname) / $(ip -4 -br addr show wlan0 2>/dev/null | awk '{print $3}')"
+echo "  uptime:     $(uptime)"
+free -m | awk 'NR==2{printf "  memoria:    %s MB usados de %s MB\n",$3,$2}'
+df -h / | awk 'NR==2{printf "  disco /:    %s usados de %s (%s livres)\n",$3,$2,$4}'

@@ -1,0 +1,19 @@
+#!/sbin/openrc-run
+# TarsOS: voz local do TARS (Piper), carregada uma vez na memória.
+name="TarsOS Piper"
+supervisor=supervise-daemon
+command="/usr/bin/nice"
+command_args="-n 10 /usr/bin/python3 /usr/local/lib/luizinhoshowos/lspiperd.py"
+directory="/usr/local/lib/luizinhoshowos"
+required_files="/opt/piper-voices/pt_BR-faber-medium.onnx"     # sem a voz baixada o serviço nem tenta subir
+respawn_delay=5
+respawn_max=0
+output_log="/var/log/lspiperd.log"
+error_log="/var/log/lspiperd.log"
+depend() {
+	need localmount
+	after lsaudiod lsdesk
+}
+stop_post() {
+	rm -f /run/lspiper.sock /run/luizinhoshowos/piper-ready
+}

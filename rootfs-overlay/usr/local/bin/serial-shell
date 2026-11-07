@@ -1,0 +1,8 @@
+#!/bin/sh
+# Shell root na serial USB (ttyGS0), chamado pelo getty do inittab.
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export HOME=/root TERM=vt100
+cd /root
+cat /etc/motd
+[ -x /bin/bash ] && exec /bin/bash -l
+exec /bin/sh -l

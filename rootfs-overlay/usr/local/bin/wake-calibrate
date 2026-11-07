@@ -1,0 +1,79 @@
+#!/usr/bin/python3
+"""Calibração do detector local de "TARS": grava amostras da sua voz (com um "ding" antes de cada uma), salva em
+/var/lib/luizinhoshowos/wake-samples/ e decodifica cada uma de várias formas, para escolher as palavras certas.
+Uso: wake-calibrate [gravar|analisar]   (sem argumento faz os dois)"""
+import glob, json, os, subprocess, sys, time, wave
+sys.path.insert(0, '/usr/local/lib/luizinhoshowos')
+import ctypes
+import lswake
+SAMPLES = '/var/lib/luizinhoshowos/wake-samples'
+LOCK = '/run/luizinhoshowos/mic-lock'
+PLAN = [('A', 'Parte A. Diga apenas: TARS. Depois de cada ding.', 6),
+        ('B', 'Parte B. Diga: TARS, que horas são agora?', 4),
+        ('C', 'Parte C. Diga qualquer frase sem a palavra TARS, como se conversasse com alguém.', 4)]
+
+
+def say(text):
+    subprocess.run(['/usr/local/bin/tars-say', text], timeout=90)
+
+
+def gravar():
+    import lsvoice
+    os.makedirs(SAMPLES, exist_ok=True)
+    for f in glob.glob(SAMPLES + '/*.wav'):
+        os.remove(f)
+    open(LOCK, 'w').close()
+    try:
+        time.sleep(3)                                   # o VoiceLoop solta o microfone
+        L = lsvoice.Listener()
+        say('Calibração do detector. Fique perto do Echo e fale depois de cada ding.')
+        for tag, desc, n in PLAN:
+            say(desc)
+            for i in range(n):
+                subprocess.run(['/usr/local/bin/lsplay', '/var/lib/luizinhoshowos/sfx/chime.wav', '0.8'])
+                time.sleep(0.9)
+                wav, why = L.listen(max_s=6, start_timeout=6, silence_s=0.8)
+                print('%s%d: %s' % (tag, i + 1, why if not wav else '%.1fs' % ((len(wav) - 44) / 32000)), flush=True)
+                if wav:
+                    open('%s/%s%d.wav' % (SAMPLES, tag, i + 1), 'wb').write(wav)
+                time.sleep(0.6)
+        say('Gravação concluída. Obrigado.')
+    finally:
+        try:
+            os.remove(LOCK)
+        except OSError:
+            pass
+
+
+def analisar():
+    w = lswake.Wake()
+    L = w.lib
+    L.vosk_recognizer_new_grm.argtypes = [ctypes.c_void_p, ctypes.c_float, ctypes.c_char_p]
+    L.vosk_recognizer_new_grm.restype = ctypes.c_void_p
+    sets = {'S1 tarso': ['tarso', '[unk]'], 'S2 tarso,tás': ['tarso', 'tás', '[unk]'],
+            'S3 amplo': ['tarso', 'tás', 'tá', 'tarsila', 'darci', 'dar', 'tares', 'tarde', '[unk]']}
+    out = []
+    for path in sorted(glob.glob(SAMPLES + '/*.wav')):
+        with wave.open(path, 'rb') as wf:
+            pcm = wf.readframes(wf.getnframes())
+        row = {'arquivo': os.path.basename(path), 'dur': round(len(pcm) / 32000, 1)}
+        t = time.time()
+        row['livre'] = w.transcribe(pcm)
+        row['t_livre'] = round(time.time() - t, 1)
+        for name, words in sets.items():
+            rec = L.vosk_recognizer_new_grm(w.model, ctypes.c_float(16000.0), json.dumps(words, ensure_ascii=False).encode())
+            for i in range(0, len(pcm), 8000):
+                L.vosk_recognizer_accept_waveform(rec, pcm[i:i + 8000], len(pcm[i:i + 8000]))
+            row[name] = json.loads(L.vosk_recognizer_final_result(rec).decode()).get('text', '')
+            L.vosk_recognizer_free(rec)
+        out.append(row)
+        print(json.dumps(row, ensure_ascii=False), flush=True)
+    json.dump(out, open(SAMPLES + '/resultado.json', 'w'), ensure_ascii=False, indent=1)
+
+
+if __name__ == '__main__':
+    modo = sys.argv[1] if len(sys.argv) > 1 else 'tudo'
+    if modo in ('gravar', 'tudo'):
+        gravar()
+    if modo in ('analisar', 'tudo'):
+        analisar()

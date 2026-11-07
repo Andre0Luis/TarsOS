@@ -1,0 +1,13 @@
+#!/bin/sh
+# TarsOS: liga o array de microfones (codec TLV320AIC3101, PCM hw:0,22: S24_3LE, 4 canais, 16 kHz).
+# Receita do audio_device.xml do checkers (amazon-oss/android_vendor_amazon_checkers):
+# as entradas diferenciais DIF1 L/R alimentam o ADC_A. MICPGA em 40 é o padrão da Amazon;
+# usamos mais ganho (a fala ficava baixa, ~-25 dBFS).
+c() { amixer -q -c0 cset name="$1" -- "$2" 2>/dev/null || echo "falhou: $1" >&2; }
+c "ADC_A Left Ip Select ADC_A DIF1_L switch" 1
+c "ADC_A Right Ip Select ADC_A DIF1_R switch" 1
+c "ADC_A DIF1_L Input Gain" 0
+c "ADC_A DIF1_R Input Gain" 0
+c "ADC_A Left Mute" 0
+c "ADC_A Right Mute" 0
+c "ADC_A MICPGA Volume Ctrl" "${1:-50}"

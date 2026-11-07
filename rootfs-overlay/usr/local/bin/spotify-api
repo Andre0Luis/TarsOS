@@ -1,0 +1,145 @@
+#!/usr/bin/python3
+"""TarsOS: ponte com a Web API do Spotify.
+- Lê /etc/luizinhoshowos/spotify-api.json (client_id + refresh_token, criado pelo spotify_auth.py)
+- A cada ~2 s pergunta "o que está tocando?" e grava /run/luizinhoshowos/spotify.json para o player
+- Recebe comandos no FIFO /run/luizinhoshowos/spotify-cmd: play, pause, toggle, next, prev, vol N, volup, voldown"""
+import json, os, select, time, urllib.error, urllib.parse, urllib.request
+
+CFG = '/etc/luizinhoshowos/spotify-api.json'
+STATE = '/run/luizinhoshowos/spotify.json'
+CMD = '/run/luizinhoshowos/spotify-cmd'
+API = 'https://api.spotify.com/v1'
+token = {'access': None, 'exp': 0}
+last = {}
+
+
+def log(*a):
+    print(time.strftime('%H:%M:%S'), *a, flush=True)
+
+
+def save_state(st):
+    st['source'] = 'Spotify'
+    st['updated'] = time.time()
+    tmp = STATE + '.tmp'
+    with open(tmp, 'w') as f:
+        json.dump(st, f)
+    os.replace(tmp, STATE)
+
+
+def refresh():
+    cfg = json.load(open(CFG))
+    data = urllib.parse.urlencode({'grant_type': 'refresh_token', 'refresh_token': cfg['refresh_token'],
+                                   'client_id': cfg['client_id']}).encode()
+    r = json.load(urllib.request.urlopen(urllib.request.Request('https://accounts.spotify.com/api/token', data=data),
+                                         timeout=15))
+    token['access'] = r['access_token']
+    token['exp'] = time.time() + r.get('expires_in', 3600) - 60
+    if r.get('refresh_token') and r['refresh_token'] != cfg['refresh_token']:   # PKCE gira o refresh token
+        cfg['refresh_token'] = r['refresh_token']
+        tmp = CFG + '.tmp'
+        with open(os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), 'w') as f:
+            json.dump(cfg, f)
+        os.replace(tmp, CFG)
+    log('token renovado')
+
+
+def call(method, path, body=None):
+    if time.time() > token['exp']:
+        refresh()
+    req = urllib.request.Request(API + path, method=method,
+                                 data=json.dumps(body).encode() if body is not None else (b'' if method in ('PUT', 'POST') else None),
+                                 headers={'Authorization': 'Bearer ' + token['access'], 'Content-Type': 'application/json'})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as r:
+            raw = r.read()
+            return r.status, (json.loads(raw) if raw else None)
+    except urllib.error.HTTPError as e:
+        if e.code == 401:
+            token['exp'] = 0
+        if e.code == 429:
+            time.sleep(int(e.headers.get('Retry-After', '5')))
+        return e.code, None
+
+
+def poll():
+    code, p = call('GET', '/me/player?additional_types=episode')
+    if code == 204 or not p:
+        st = dict(last, state='stopped') if last else {'state': 'stopped'}
+        save_state(st)
+        return
+    if code != 200:
+        return
+    item = p.get('item') or {}
+    imgs = (item.get('album') or {}).get('images') or item.get('images') or []
+    st = {
+        'state': 'playing' if p.get('is_playing') else 'paused',
+        'title': item.get('name', ''),
+        'artists': [a['name'] for a in item.get('artists', [])] or ([item['show']['name']] if item.get('show') else []),
+        'album': (item.get('album') or {}).get('name', ''),
+        'cover': imgs[0]['url'] if imgs else None,
+        'duration_ms': item.get('duration_ms', 0),
+        'position_ms': p.get('progress_ms') or 0,
+        'position_at': time.time(),
+        'volume': (p.get('device') or {}).get('volume_percent'),
+        'user': (p.get('device') or {}).get('name', ''),
+        'shuffle': p.get('shuffle_state'),
+        'api': True,
+    }
+    last.clear(); last.update(st)
+    save_state(st)
+
+
+def command(line):
+    w = line.split()
+    if not w:
+        return
+    c = w[0]
+    playing = last.get('state') == 'playing'
+    if c == 'toggle':
+        c = 'pause' if playing else 'play'
+    vol = last.get('volume') or 50
+    if c == 'play':
+        call('PUT', '/me/player/play')
+    elif c == 'pause':
+        call('PUT', '/me/player/pause')
+    elif c == 'next':
+        call('POST', '/me/player/next')
+    elif c == 'prev':
+        call('POST', '/me/player/previous')
+    elif c in ('vol', 'volup', 'voldown'):
+        v = int(w[1]) if c == 'vol' and len(w) > 1 else vol + (10 if c == 'volup' else -10)
+        call('PUT', '/me/player/volume?volume_percent=%d' % max(0, min(100, v)))
+    log('comando:', line)
+    time.sleep(0.4)
+    poll()
+
+
+def main():
+    os.makedirs('/run/luizinhoshowos', exist_ok=True)
+    if not os.path.exists(CMD):
+        os.mkfifo(CMD, 0o666)
+    os.chmod(CMD, 0o666)
+    fd = os.open(CMD, os.O_RDWR | os.O_NONBLOCK)          # RDWR: nunca dá EOF
+    buf = b''
+    while not os.path.exists(CFG):
+        log('aguardando autorização (', CFG, ')')
+        time.sleep(10)
+    next_poll = 0
+    while True:
+        try:
+            if time.time() >= next_poll:
+                poll()
+                next_poll = time.time() + (2 if last.get('state') == 'playing' else 4)
+            r, _, _ = select.select([fd], [], [], max(0.1, next_poll - time.time()))
+            if r:
+                buf += os.read(fd, 4096)
+                while b'\n' in buf:
+                    line, buf = buf.split(b'\n', 1)
+                    command(line.decode(errors='replace').strip())
+        except Exception as e:                            # rede caiu etc.: tenta de novo
+            log('erro:', e)
+            time.sleep(5)
+
+
+if __name__ == '__main__':
+    main()

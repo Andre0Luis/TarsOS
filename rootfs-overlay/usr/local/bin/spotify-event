@@ -1,0 +1,37 @@
+#!/usr/bin/python3
+"""Gancho --onevent do librespot: grava o estado do Spotify em /run/luizinhoshowos/spotify.json
+para a área de trabalho (app Spotify) mostrar a música atual."""
+import json, os, time
+STATE = '/run/luizinhoshowos/spotify.json'
+try:
+    data = json.load(open(STATE))
+except (OSError, ValueError):
+    data = {}
+e = os.environ
+ev = e.get('PLAYER_EVENT', '')
+data['event'] = ev
+data['updated'] = time.time()
+if ev in ('track_changed', 'playing', 'paused', 'loading', 'preloading', 'started'):
+    for k_env, k in (('NAME', 'title'), ('ALBUM', 'album'), ('TRACK_ID', 'track_id'), ('URI', 'uri'),
+                     ('DURATION_MS', 'duration_ms'), ('POSITION_MS', 'position_ms')):
+        if e.get(k_env):
+            data[k] = e[k_env]
+    if e.get('ARTISTS'):
+        data['artists'] = [a for a in e['ARTISTS'].split('\n') if a]
+    if e.get('COVERS'):
+        data['cover'] = e['COVERS'].split('\n')[0]
+if ev in ('playing', 'started'):
+    data['state'] = 'playing'
+    data['position_at'] = time.time()
+elif ev == 'paused':
+    data['state'] = 'paused'
+elif ev in ('stopped', 'session_disconnected', 'unavailable'):
+    data['state'] = 'stopped'
+if e.get('VOLUME'):
+    data['volume'] = round(int(e['VOLUME']) * 100 / 65535)
+if e.get('USER_NAME'):
+    data['user'] = e['USER_NAME']
+tmp = STATE + '.tmp'
+with open(tmp, 'w') as f:
+    json.dump(data, f)
+os.replace(tmp, STATE)

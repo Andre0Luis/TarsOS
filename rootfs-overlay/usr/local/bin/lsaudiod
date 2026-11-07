@@ -1,0 +1,174 @@
+#!/usr/bin/python3
+"""TarsOS: mixador de áudio do Echo Show 5.
+
+O driver de som da MediaTek (I2S0DL1) aceita UM cliente por vez, não tem mmap (o dmix do ALSA não funciona)
+e derruba o kernel com escritas fora de múltiplos de 64 bytes. Este daemon é o único dono do hardware:
+  - clientes conectam em /run/lsaudio.sock e enviam PCM cru (S16_LE, 48000 Hz, estéreo);
+  - a cada bloco de 2400 quadros (50 ms = 9600 bytes, múltiplo de 64) ele soma todos os clientes ativos;
+  - o bloco vai para um `aplay` (hw:0,23, período 2400, buffer 9600), aberto só enquanto há som.
+Clientes: `lsaudio-play` (lê a entrada padrão) e `lsplay arquivo` (qualquer formato que o sox leia)."""
+import array
+import fcntl
+import os
+import select
+import socket
+import subprocess
+import sys
+import time
+
+SOCK = '/run/lsaudio.sock'
+ACTIVE = '/run/luizinhoshowos/audio-active'     # existe enquanto há som de verdade sendo tocado
+RATE, CH, FRAMES = 48000, 2, 2400
+BLOCK = FRAMES * CH * 2                 # 9600 bytes
+STARVE = 0.15                           # cliente sem dados por 150 ms é considerado em pausa
+IDLE_CLOSE = 3.0                        # fecha o hardware depois de 3 s de silêncio
+APLAY = ['/usr/bin/aplay', '-q', '-t', 'raw', '-f', 'S16_LE', '-r', str(RATE), '-c', str(CH),
+         '-D', 'hw:0,23', '--period-size=%d' % FRAMES, '--buffer-size=%d' % (FRAMES * 4)]
+
+
+def log(*a):
+    print(time.strftime('%H:%M:%S'), *a, flush=True)
+
+
+class Client:
+    def __init__(self, conn):
+        self.conn = conn
+        conn.setblocking(False)
+        self.buf = bytearray()
+        self.eof = False
+        self.last = time.monotonic()
+
+    def read(self):
+        try:
+            data = self.conn.recv(65536)
+        except BlockingIOError:
+            return
+        except OSError:
+            self.eof = True
+            return
+        if data:
+            self.buf += data
+            self.last = time.monotonic()
+        else:
+            self.eof = True
+
+    def waiting(self, now):
+        """True se vale a pena esperar este cliente completar um bloco."""
+        return (not self.eof) and len(self.buf) < BLOCK and (now - self.last) < STARVE and len(self.buf) > 0
+
+
+def mix(chunks):
+    if len(chunks) == 1:
+        return bytes(chunks[0]).ljust(BLOCK, b'\0')
+    acc = array.array('i', bytes(BLOCK * 2))                       # 32 bits para somar sem estourar
+    for c in chunks:
+        a = array.array('h')
+        a.frombytes(bytes(c).ljust(BLOCK, b'\0'))
+        for i, v in enumerate(a):
+            acc[i] += v
+    out = array.array('h', (32767 if v > 32767 else -32768 if v < -32768 else v for v in acc))
+    return out.tobytes()
+
+
+_active = False
+
+
+def set_active(on):
+    global _active
+    if on == _active:
+        return
+    _active = on
+    try:
+        if on:
+            os.makedirs(os.path.dirname(ACTIVE), exist_ok=True)
+            open(ACTIVE, 'w').close()
+        else:
+            os.remove(ACTIVE)
+    except OSError:
+        pass
+
+
+def ensure(aplay, n):
+    """Abre o aplay (dono do hardware) se ainda não estiver aberto."""
+    if aplay is None or aplay.poll() is not None:
+        aplay = subprocess.Popen(APLAY, stdin=subprocess.PIPE)
+        try:
+            fcntl.fcntl(aplay.stdin.fileno(), 1031, 4096)   # F_SETPIPE_SZ: pipe pequeno = pouco atraso
+        except OSError:
+            pass
+        log('aplay aberto (%d cliente(s))' % n)
+    return aplay
+
+
+def feed(aplay, data):
+    try:
+        aplay.stdin.write(data)
+        aplay.stdin.flush()
+    except (BrokenPipeError, OSError):
+        aplay.kill()
+
+
+def main():
+    try:
+        os.remove(SOCK)
+    except FileNotFoundError:
+        pass
+    srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    srv.bind(SOCK)
+    os.chmod(SOCK, 0o666)
+    srv.listen(8)
+    srv.setblocking(False)
+    clients, aplay, last_sound = [], None, 0.0
+    log('lsaudiod pronto em', SOCK)
+    while True:
+        now = time.monotonic()
+        socks = [srv] + [c.conn for c in clients]
+        r, _, _ = select.select(socks, [], [], 0.02)
+        for s in r:
+            if s is srv:
+                try:
+                    conn, _ = srv.accept()
+                    clients.append(Client(conn))
+                except BlockingIOError:
+                    pass
+            else:
+                for c in clients:
+                    if c.conn is s:
+                        c.read()
+        now = time.monotonic()
+        have = [c for c in clients if c.buf]
+        if have and not any(c.waiting(now) for c in have):
+            chunks = []
+            for c in have:
+                chunks.append(c.buf[:BLOCK])
+                del c.buf[:BLOCK]
+            aplay = ensure(aplay, len(have))
+            feed(aplay, mix(chunks))
+            last_sound = now
+            set_active(True)
+        elif aplay is not None and aplay.poll() is None and not any(c.waiting(now) for c in have) \
+                and now - last_sound <= IDLE_CLOSE:
+            feed(aplay, bytes(BLOCK))               # silêncio: mantém o hardware alimentado (sem underrun)
+        if _active and now - last_sound > 1.0:
+            set_active(False)
+        for c in [c for c in clients if c.eof and not c.buf]:
+            try:
+                c.conn.close()
+            except OSError:
+                pass
+            clients.remove(c)
+        if aplay is not None and not have and now - last_sound > IDLE_CLOSE:
+            try:
+                aplay.stdin.close()             # fim da entrada: o aplay drena e sai sem underrun
+                aplay.wait(timeout=2)
+            except Exception:
+                aplay.kill()
+            aplay = None
+            log('aplay fechado (silêncio)')
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.exit(0)

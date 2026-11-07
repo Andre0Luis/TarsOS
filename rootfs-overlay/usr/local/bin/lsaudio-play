@@ -1,0 +1,21 @@
+#!/usr/bin/python3
+"""Cliente do lsaudiod: copia PCM cru (S16_LE, 48 kHz, estéreo) da entrada padrão para o mixador."""
+import socket, sys, time
+s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+for _ in range(50):
+    try:
+        s.connect('/run/lsaudio.sock')
+        break
+    except OSError:
+        time.sleep(0.1)
+else:
+    sys.exit('lsaudiod não está rodando')
+try:
+    while True:
+        d = sys.stdin.buffer.read1(8192)
+        if not d:
+            break
+        s.sendall(d)
+except (BrokenPipeError, ConnectionResetError, KeyboardInterrupt):
+    pass
+s.close()

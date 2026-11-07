@@ -1,0 +1,4 @@
+#!/bin/sh
+# Liga o caminho do alto-falante e os microfones no boot, com o último volume salvo.
+/usr/local/bin/audio-speaker >> /var/log/luizinhoshowos.log 2>&1
+/usr/local/bin/audio-mic >> /var/log/luizinhoshowos.log 2>&1

@@ -1,0 +1,15 @@
+#!/sbin/openrc-run
+# TarsOS Desktop: área de trabalho no framebuffer (substitui o lsterm).
+name="TarsOS Desktop"
+supervisor=supervise-daemon
+command="/usr/bin/python3"
+command_args="/usr/local/lib/luizinhoshowos/lsdesk.py"
+respawn_delay=2
+respawn_max=0
+output_log="/var/log/lsdesk.log"
+error_log="/var/log/lsdesk.log"
+
+depend() {
+	need localmount
+	after local
+}

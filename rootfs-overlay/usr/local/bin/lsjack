@@ -1,0 +1,14 @@
+#!/bin/sh
+# TarsOS: troca automática alto-falante <-> fone. O driver ACCDET expõe o estado do P2 em /sys/class/switch/h2w/state
+# (0 = nada, 1 = fone com microfone, 2 = fone sem microfone). Ao mudar, pede ao audio-speaker para recalcular o amplificador.
+JACK=${LSJACK_STATE:-/sys/class/switch/h2w/state}
+last=x
+while :; do
+  s=$(cat "$JACK" 2>/dev/null || echo 0)
+  if [ "$s" != "$last" ]; then
+    last=$s
+    /usr/local/bin/audio-speaker apply
+    echo "$(date '+%H:%M:%S') P2 estado=$s"
+  fi
+  sleep 1
+done

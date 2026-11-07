@@ -1,0 +1,90 @@
+#!/usr/bin/python3
+"""Lê o pipe de metadados do shairport-sync e grava /run/luizinhoshowos/airplay.json
+(título, artista, álbum, capa, estado e progresso) para o player da área de trabalho."""
+import base64, json, os, re, stat, time
+PIPE = '/run/luizinhoshowos/airplay-metadata'
+STATE = '/run/luizinhoshowos/airplay.json'
+ITEM = re.compile(rb'<item><type>([0-9a-f]{8})</type><code>([0-9a-f]{8})</code><length>(\d+)</length>'
+                  rb'(?:\s*<data encoding="base64">\s*([A-Za-z0-9+/=\s]*?)</data>)?\s*</item>')
+st = {'source': 'AirPlay', 'state': 'stopped'}
+
+
+def save():
+    st['updated'] = time.time()
+    tmp = STATE + '.tmp'
+    with open(tmp, 'w') as f:
+        json.dump(st, f)
+    os.replace(tmp, STATE)
+
+
+def handle(typ, code, data):
+    t, c = bytes.fromhex(typ.decode()).decode('latin1'), bytes.fromhex(code.decode()).decode('latin1')
+    txt = data.decode('utf-8', 'replace') if data else ''
+    if t == 'core':
+        key = {'minm': 'title', 'asar': 'artist', 'asal': 'album'}.get(c)
+        if key:
+            st[key] = txt
+            if key == 'artist':
+                st['artists'] = [txt] if txt else []
+            save()
+    elif t == 'ssnc':
+        if c in ('pbeg', 'prsm'):
+            st['state'] = 'playing'; st['position_at'] = time.time(); save()
+        elif c == 'pfls':
+            st['state'] = 'paused'; save()
+        elif c == 'pend':
+            st['state'] = 'stopped'; save()
+        elif c == 'prgr' and txt:                       # "início/atual/fim" em frames RTP (44,1 kHz)
+            try:
+                a, b, e = (int(x) for x in txt.split('/'))
+                st['position_ms'] = int((b - a) / 44.1)
+                st['duration_ms'] = int((e - a) / 44.1)
+                st['position_at'] = time.time()
+                save()
+            except ValueError:
+                pass
+        elif c == 'pvol' and txt:                       # "airplay_vol,..." de -30 a 0 (-144 = mudo)
+            try:
+                v = float(txt.split(',')[0])
+                st['volume'] = 0 if v <= -30 else round(100 * (v + 30) / 30)
+                save()
+            except ValueError:
+                pass
+        elif c == 'snam' and txt:                       # nome do aparelho que está transmitindo
+            st['user'] = txt; save()
+        elif c == 'MDNM' or c == 'PICT':
+            pass
+        elif c == 'mden':                                # fim de um bloco de metadados: procura a capa nova
+            d = '/run/luizinhoshowos/airplay-covers'
+            try:
+                files = sorted((os.path.join(d, f) for f in os.listdir(d)), key=os.path.getmtime)
+                if files and files[-1] != st.get('cover_file'):
+                    st['cover_file'] = files[-1]; save()
+            except OSError:
+                pass
+
+
+def main():
+    os.makedirs('/run/luizinhoshowos/airplay-covers', exist_ok=True)
+    if not (os.path.exists(PIPE) and stat.S_ISFIFO(os.stat(PIPE).st_mode)):
+        try:
+            os.remove(PIPE)
+        except OSError:
+            pass
+        os.mkfifo(PIPE, 0o666)
+    save()
+    while True:
+        with open(PIPE, 'rb') as f:                      # bloqueia até o shairport-sync abrir o pipe
+            buf = b''
+            for chunk in iter(lambda: f.read1(65536), b''):
+                buf += chunk
+                last = 0
+                for m in ITEM.finditer(buf):
+                    data = base64.b64decode(m.group(4)) if m.group(4) else b''
+                    handle(m.group(1), m.group(2), data)
+                    last = m.end()
+                buf = buf[last:] if last else buf[-200000:]
+
+
+if __name__ == '__main__':
+    main()

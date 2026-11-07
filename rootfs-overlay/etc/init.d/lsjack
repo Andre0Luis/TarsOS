@@ -1,0 +1,13 @@
+#!/sbin/openrc-run
+# TarsOS: troca automática alto-falante <-> fone (P2).
+name="TarsOS Jack"
+supervisor=supervise-daemon
+command="/usr/local/bin/lsjack"
+respawn_delay=2
+respawn_max=0
+output_log="/var/log/lsjack.log"
+error_log="/var/log/lsjack.log"
+depend() {
+	need localmount
+	after lsaudiod
+}

@@ -1,0 +1,14 @@
+#!/bin/sh
+# O Echo não tem bateria de RTC: ao perder energia o relógio volta para 2009.
+# Sincroniza pela internet assim que houver rede (em segundo plano, sem atrasar o boot).
+(
+  for i in $(seq 1 30); do
+    if busybox ntpd -n -q -p pool.ntp.org -p a.st1.ntp.br >/dev/null 2>&1; then
+      hwclock -w 2>/dev/null
+      echo "$(date) hora sincronizada (tentativa $i)" >> /var/log/luizinhoshowos.log
+      exit 0
+    fi
+    sleep 5
+  done
+  echo "$(date) falha ao sincronizar a hora" >> /var/log/luizinhoshowos.log
+) &

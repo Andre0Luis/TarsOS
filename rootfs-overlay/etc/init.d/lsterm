@@ -1,0 +1,15 @@
+#!/sbin/openrc-run
+# TarsOS Terminal: terminal com teclado touch no framebuffer.
+name="TarsOS Terminal"
+supervisor=supervise-daemon
+command="/usr/bin/python3"
+command_args="/usr/local/lib/luizinhoshowos/lsterm.py"
+respawn_delay=2
+respawn_max=0
+output_log="/var/log/lsterm.log"
+error_log="/var/log/lsterm.log"
+
+depend() {
+	need localmount
+	after local
+}

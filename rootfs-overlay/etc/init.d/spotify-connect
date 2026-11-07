@@ -1,0 +1,25 @@
+#!/sbin/openrc-run
+# TarsOS: Spotify Connect (librespot). O Echo aparece como caixa de som
+# "TarsOS" no app do Spotify (precisa de conta Premium) e toca no alto-falante.
+name="Spotify Connect"
+supervisor=supervise-daemon
+command="/usr/bin/librespot"
+command_args="--name TarsOS --device-type speaker --backend alsa --device plughw:0,23
+	--format S16 --bitrate 320 --initial-volume 60 --enable-volume-normalisation
+	--cache /var/cache/librespot --onevent /usr/local/bin/spotify-event"
+command_user="librespot:audio"
+respawn_delay=3
+respawn_max=0
+output_log="/var/log/spotify-connect.log"
+error_log="/var/log/spotify-connect.log"
+
+depend() {
+	need net
+	after networkmanager local
+}
+
+start_pre() {
+	id librespot >/dev/null 2>&1 || adduser -S -D -H -h /var/cache/librespot -s /sbin/nologin -G audio librespot
+	checkpath -d -o librespot:audio -m 0755 /var/cache/librespot /run/luizinhoshowos
+	checkpath -f -o librespot:audio -m 0644 /var/log/spotify-connect.log
+}

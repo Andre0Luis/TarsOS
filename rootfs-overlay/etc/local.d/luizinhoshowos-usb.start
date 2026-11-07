@@ -1,0 +1,19 @@
+#!/bin/sh
+# TarsOS: expõe uma porta serial USB (CDC-ACM) no lugar do RNDIS,
+# porque o macOS não suporta RNDIS. O shell root roda em ttyGS0 (inittab).
+G=/sys/class/android_usb/android0
+LOG=/var/log/luizinhoshowos.log
+{
+  echo "=== $(date) usb"
+  echo "antes: functions=$(cat $G/functions) state=$(cat $G/state)"
+  echo 0 > $G/enable
+  echo 18D1 > $G/idVendor
+  echo D00A > $G/idProduct
+  echo "TarsOS" > $G/iManufacturer
+  echo "TarsOS" > $G/iProduct
+  echo 1 > $G/f_acm/instances 2>/dev/null
+  echo acm > $G/functions
+  echo 1 > $G/enable
+  sleep 1
+  echo "depois: functions=$(cat $G/functions) state=$(cat $G/state)"
+} >> $LOG 2>&1

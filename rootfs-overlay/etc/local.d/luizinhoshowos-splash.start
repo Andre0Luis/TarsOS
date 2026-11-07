@@ -1,0 +1,4 @@
+#!/bin/sh
+# Desenha a tela de boas-vindas do TarsOS no framebuffer (RGBA 480x960).
+S=/usr/share/luizinhoshowos/splash.raw
+[ -e /dev/fb0 ] && [ -e "$S" ] && cat "$S" > /dev/fb0

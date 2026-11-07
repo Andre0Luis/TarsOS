@@ -1,0 +1,57 @@
+#!/usr/bin/python3
+"""TarsOS: baixa as chaves locais dos aparelhos Tuya/Smart Life da sua conta (iot.tuya.com) para o TARS.
+
+Uso (no terminal do Echo):  tuya-sync
+Pergunta o Access ID e o Access Secret do projeto (o secret NÃO é guardado em disco) e grava /etc/luizinhoshowos/tuya.json
+(modo 600). Fechaduras e câmeras ficam de fora de propósito: o TARS não deve abrir portas.
+Só aparecem aparelhos pareados no app Tuya Smart / Smart Life (e não em apps de marca como o da Ekaza)."""
+import getpass
+import json
+import os
+import sys
+
+import tinytuya
+
+FILE = '/etc/luizinhoshowos/tuya.json'
+SKIP = {'ms', 'jtmspro', 'sp', 'wk'}        # fechaduras, câmeras e termostatos de aquecimento
+LAMP = {'dj', 'dd', 'xdd', 'fwd'}
+REGIONS = ('us', 'us-e', 'eu', 'in', 'cn')
+
+
+def main():
+    key = sys.argv[1] if len(sys.argv) > 1 else input('Access ID (Client ID): ').strip()
+    secret = getpass.getpass('Access Secret (não aparece na tela): ').strip()
+    devs, region = [], None
+    for r in REGIONS:
+        try:
+            res = tinytuya.Cloud(apiRegion=r, apiKey=key, apiSecret=secret).getdevices(verbose=False)
+        except Exception as e:
+            print(r, 'erro:', e)
+            continue
+        if isinstance(res, list) and res:
+            devs, region = res, r
+            break
+        print(r, '->', 'nenhum aparelho' if isinstance(res, list) else str(res)[:150].replace(secret, '***'))
+    if not devs:
+        print('Nada encontrado. Confira o secret, a região e se a conta do app está ligada ao projeto (Devices > Link App Account).')
+        return 1
+    out = []
+    for d in devs:
+        if d.get('category') in SKIP:
+            print('  (ignorado: %s, categoria %s)' % (d.get('name'), d.get('category')))
+            continue
+        e = {'name': d.get('name'), 'id': d.get('id'), 'key': d.get('key'), 'mac': d.get('mac'), 'version': d.get('ver') or '3.3'}
+        if d.get('category') in LAMP:
+            e['tipo'] = 'lampada'
+        out.append(e)
+        print('  %-28s categoria %s' % (d.get('name'), d.get('category')))
+    os.makedirs(os.path.dirname(FILE), exist_ok=True)
+    fd = os.open(FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, 'w') as f:
+        json.dump(out, f, ensure_ascii=False, indent=1)
+    print('%d aparelho(s) salvos em %s (região %s). Peça: "TARS, liga a tomada".' % (len(out), FILE, region))
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

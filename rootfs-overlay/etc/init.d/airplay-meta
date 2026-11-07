@@ -1,0 +1,16 @@
+#!/sbin/openrc-run
+# TarsOS: lê os metadados do AirPlay (shairport-sync) para o player na tela.
+name="AirPlay metadados"
+supervisor=supervise-daemon
+command="/usr/local/bin/airplay-meta"
+respawn_delay=2
+respawn_max=0
+output_log="/var/log/airplay-meta.log"
+error_log="/var/log/airplay-meta.log"
+depend() {
+	before shairport-sync
+	need localmount
+}
+start_pre() {
+	checkpath -d -m 0755 /run/luizinhoshowos /run/luizinhoshowos/airplay-covers
+}

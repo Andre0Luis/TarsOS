@@ -1,0 +1,14 @@
+#!/sbin/openrc-run
+# TarsOS: mixador de áudio (único dono do alto-falante).
+name="TarsOS Audio"
+supervisor=supervise-daemon
+command="/usr/local/bin/lsaudiod"
+respawn_delay=2
+respawn_max=0
+output_log="/var/log/lsaudiod.log"
+error_log="/var/log/lsaudiod.log"
+depend() {
+	need localmount
+	before airplay lsdesk
+	after local
+}

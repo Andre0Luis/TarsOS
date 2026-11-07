@@ -1,0 +1,306 @@
+#!/usr/bin/python3
+"""TarsOS: a voz do TARS.
+
+Fala um texto em português com a voz "Orus" do Gemini TTS (gemini-3.8-flash-tts), frase por frase:
+enquanto uma toca, a próxima já está sendo gerada. Se o Gemini falhar, usa o espeak-ng.
+O áudio vai para o mixador (lsaudiod) pelo lsaudio-play. Enquanto fala existe o arquivo
+/run/luizinhoshowos/tars-speaking (a tela usa isso para animar o monólito).
+
+Uso:  tars-say "texto"    |    echo "texto" | tars-say    |    tars-say --stop
+Ambiente: TARS_VOICE_NAME (padrão Orus), TARS_TTS_MODEL (padrão: lista abaixo)."""
+import base64
+import hashlib
+import json
+import os
+import queue
+import re
+import signal
+import socket
+import struct
+import subprocess
+import sys
+import threading
+import time
+import urllib.error
+import urllib.request
+
+KEY_FILE = '/etc/luizinhoshowos/gemini.json'
+API = 'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent'
+MODELS = ([os.environ['TARS_TTS_MODEL']] if os.environ.get('TARS_TTS_MODEL') else []) + \
+    ['gemini-3.8-flash-tts', 'gemini-3.1-flash-tts-preview', 'gemini-3.8-flash-lite-tts']
+def _cfg_voice():
+    try:
+        return json.load(open('/var/lib/luizinhoshowos/tars.json')).get('voice_name') or 'Charon'
+    except (OSError, ValueError):
+        return 'Charon'
+
+
+def _cfg_engine():
+    """'gemini' (padrão: voz natural na nuvem, com o Piper local de reserva) ou 'piper' (sempre local, mais lenta)."""
+    try:
+        return json.load(open('/var/lib/luizinhoshowos/tars.json')).get('voice_engine') or 'gemini'
+    except (OSError, ValueError):
+        return 'gemini'
+
+
+VOICE = os.environ.get('TARS_VOICE_NAME') or _cfg_voice()
+ENGINE = os.environ.get('TARS_ENGINE') or _cfg_engine()
+PIPER_SOCK = '/run/lspiper.sock'
+PIPER_MAX_CHARS = 160                   # o Piper roda ~3x mais devagar que o tempo real neste processador: só para respostas curtas
+RUN = '/run/luizinhoshowos'
+STATE = RUN + '/tars-speaking'
+PIDFILE = RUN + '/tars-say.pid'
+CACHE = '/var/lib/luizinhoshowos/tts-cache'
+RATE = 24000                            # o Gemini TTS devolve PCM 16 bits, 24 kHz, mono
+
+
+def stop_previous():
+    try:
+        pid = int(open(PIDFILE).read())
+        if pid != os.getpid():
+            os.kill(pid, signal.SIGTERM)
+    except (OSError, ValueError):
+        pass
+
+
+def clean(text):
+    text = re.sub(r'[*_`#~|<>\[\]{}]+', ' ', text)
+    return re.sub(r'\s+', ' ', text).strip()
+
+
+def chunks(text):
+    """Divide em frases e junta as muito curtas, para menos chamadas e fala mais fluida."""
+    parts = re.split(r'(?<=[.!?…])\s+', text)
+    out = []
+    for p in parts:
+        if out and (len(out[-1]) < 28 or len(p) < 14):
+            out[-1] += ' ' + p
+        else:
+            out.append(p)
+    return [c for c in out if c.strip()]
+
+
+COOLDOWN = RUN + '/tts-cooldown'            # depois de um 429, usa o espeak por 90 s (sem esperar à toa)
+
+
+def cooling_down():
+    try:
+        return time.time() < float(open(COOLDOWN).read())
+    except (OSError, ValueError):
+        return False
+
+
+def gemini_tts(key, text):
+    if cooling_down():
+        return None
+    for model in MODELS:
+        for attempt in range(2):
+            body = {'contents': [{'parts': [{'text': text}]}],
+                    'generationConfig': {'responseModalities': ['AUDIO'],
+                                         'speechConfig': {'voiceConfig': {'prebuiltVoiceConfig': {'voiceName': VOICE}}}}}
+            req = urllib.request.Request(API % model, data=json.dumps(body).encode(),
+                                         headers={'x-goog-api-key': key, 'Content-Type': 'application/json'})
+            try:
+                r = json.load(urllib.request.urlopen(req, timeout=30))
+                part = r['candidates'][0]['content']['parts'][0]['inlineData']
+                return base64.b64decode(part['data'])
+            except urllib.error.HTTPError as e:
+                if e.code == 429:                       # cota do TTS esgotada: esfria e cai para o espeak
+                    try:
+                        os.makedirs(RUN, exist_ok=True)
+                        open(COOLDOWN, 'w').write(str(time.time() + 90))
+                    except OSError:
+                        pass
+                    return None
+                if e.code in (500, 502, 503, 504):
+                    time.sleep(1.0)
+                    continue
+                break                                   # 400/403/404: tenta o próximo modelo
+            except (KeyError, IndexError):
+                break                                   # resposta sem áudio: próximo modelo
+            except (TimeoutError, OSError):
+                break
+    return None
+
+
+def cached_tts(key, text):
+    """Áudio do Gemini com cache em disco (a mesma frase não gasta chamada nem espera de novo)."""
+    path = os.path.join(CACHE, hashlib.sha1((VOICE + '|' + text).encode()).hexdigest() + '.pcm')
+    try:
+        return open(path, 'rb').read()
+    except OSError:
+        pass
+    pcm = gemini_tts(key, text) if key else None
+    if pcm:
+        try:
+            os.makedirs(CACHE, exist_ok=True)
+            files = sorted((os.path.join(CACHE, f) for f in os.listdir(CACHE)), key=os.path.getmtime)
+            for old in files[:max(0, len(files) - 150)]:        # guarda no máximo 150 frases
+                os.remove(old)
+            with open(path, 'wb') as f:
+                f.write(pcm)
+        except OSError:
+            pass
+    return pcm
+
+
+def piper_tts(text):
+    """Voz local neural (serviço lspiperd). -> PCM 24 kHz mono, ou None se o serviço não estiver pronto."""
+    if not os.path.exists(PIPER_SOCK):
+        return None
+    try:
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s.settimeout(90)
+        s.connect(PIPER_SOCK)
+        s.sendall(text.encode() + b'\n')
+
+        def recvn(n):
+            buf = b''
+            while len(buf) < n:
+                part = s.recv(n - len(buf))
+                if not part:
+                    raise OSError('socket fechado')
+                buf += part
+            return buf
+        out, rate = [], 22050
+        while True:
+            r, n = struct.unpack('<II', recvn(8))
+            if n == 0:
+                break
+            out.append(recvn(n))
+            rate = r
+        s.close()
+        pcm = b''.join(out)
+        if not pcm:
+            return None
+        import numpy as np
+        a = np.frombuffer(pcm, dtype='<i2').astype(np.float32)
+        if rate != RATE:                                   # 22050 -> 24000 Hz (interpolação linear basta para voz)
+            idx = np.arange(0, len(a) * RATE / rate) * rate / RATE
+            a = np.interp(idx, np.arange(len(a)), a)
+        return np.clip(a, -32768, 32767).astype('<i2').tobytes()
+    except (OSError, ValueError, struct.error):
+        return None
+
+
+def cached_piper(text):
+    path = os.path.join(CACHE, hashlib.sha1(('piper|' + text).encode()).hexdigest() + '.pcm')
+    try:
+        return open(path, 'rb').read()
+    except OSError:
+        pass
+    pcm = piper_tts(text)
+    if pcm:
+        try:
+            os.makedirs(CACHE, exist_ok=True)
+            with open(path, 'wb') as f:
+                f.write(pcm)
+        except OSError:
+            pass
+    return pcm
+
+
+def espeak_tts(text):
+    """Reserva local: espeak-ng -> PCM 24 kHz mono."""
+    try:
+        p1 = subprocess.Popen(['/usr/bin/espeak-ng', '-v', 'pt-br+m3', '-p', '22', '-s', '148', '-g', '2', '--stdout'],
+                              stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        p2 = subprocess.Popen(['/usr/bin/sox', '-q', '-t', 'wav', '-', '-t', 'raw', '-r', str(RATE), '-e', 'signed',
+                               '-b', '16', '-c', '1', '-', 'bass', '5'],
+                              stdin=p1.stdout, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        p1.stdin.write(text.encode())
+        p1.stdin.close()
+        return p2.communicate(timeout=30)[0]
+    except Exception:
+        return None
+
+
+def main():
+    if len(sys.argv) > 1 and sys.argv[1] == '--stop':
+        stop_previous()
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == '--warm-piper':      # só gera a voz local e guarda no cache, sem tocar
+        for c in chunks(clean(' '.join(sys.argv[2:]))):
+            cached_piper(c)
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == '--warm':           # só gera e guarda no cache, sem tocar
+        try:
+            key = json.load(open(KEY_FILE)).get('api_key', '')
+        except (OSError, ValueError):
+            return
+        for c in chunks(clean(' '.join(sys.argv[2:]))):
+            cached_tts(key, c)
+        return
+    text = clean(' '.join(sys.argv[1:]) if len(sys.argv) > 1 else sys.stdin.read())
+    if not text:
+        return
+    os.makedirs(RUN, exist_ok=True)
+    stop_previous()
+    open(PIDFILE, 'w').write(str(os.getpid()))
+    try:
+        key = json.load(open(KEY_FILE)).get('api_key', '')
+    except (OSError, ValueError):
+        key = ''
+
+    q = queue.Queue()
+
+    use_piper = os.path.exists(PIPER_SOCK) and len(text) <= PIPER_MAX_CHARS
+
+    def producer():
+        for c in chunks(text):
+            pcm = None
+            if use_piper and ENGINE == 'piper':
+                pcm = cached_piper(c)
+            if not pcm:
+                pcm = cached_tts(key, c)                   # Gemini (com cache); some por 90 s depois de um 429
+            if not pcm and use_piper and ENGINE != 'piper':
+                pcm = cached_piper(c)                      # reserva local neural, em vez do espeak metálico
+            q.put(pcm or espeak_tts(c) or b'')
+        q.put(None)
+
+    threading.Thread(target=producer, daemon=True).start()
+    sink = subprocess.Popen(
+        '/usr/bin/sox -q -t raw -r %d -e signed -b 16 -c 1 - -t raw -r 48000 -e signed -b 16 -c 2 - gain -n -1 '
+        '| /usr/local/bin/lsaudio-play' % RATE, shell=True, stdin=subprocess.PIPE, stderr=subprocess.DEVNULL,
+        preexec_fn=os.setsid)
+
+    def cleanup(*_):
+        try:
+            os.killpg(sink.pid, signal.SIGTERM)
+        except OSError:
+            pass
+        for f in (STATE, PIDFILE):
+            try:
+                os.remove(f)
+            except OSError:
+                pass
+        sys.exit(0)
+    signal.signal(signal.SIGTERM, cleanup)
+    signal.signal(signal.SIGINT, cleanup)
+
+    open(STATE, 'w').close()
+    t0, total = None, 0.0
+    try:
+        while True:
+            pcm = q.get()
+            if pcm is None:
+                break
+            if not pcm:
+                continue
+            if t0 is None:
+                t0 = time.monotonic()
+            pcm = pcm[:len(pcm) // 2 * 2]
+            sink.stdin.write(pcm)
+            sink.stdin.flush()
+            total += len(pcm) / 2 / RATE
+        sink.stdin.close()
+        if t0 is not None:                               # espera o áudio terminar de tocar
+            time.sleep(max(0.0, total - (time.monotonic() - t0)) + 0.4)
+    except (BrokenPipeError, OSError):
+        pass
+    finally:
+        cleanup()
+
+
+if __name__ == '__main__':
+    main()

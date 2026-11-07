@@ -1,0 +1,42 @@
+#!/bin/sh
+# TarsOS: liga o alto-falante do Echo Show 5 (1a geração).
+# Cadeia: DL1 -> I2S1 (pinos 72-74) -> RT5616 (hw:0,23) -> LOUT diferencial -> amplificador externo.
+# Receita tirada do audio_device_rt5616.xml do Android (amazon-oss/android_vendor_amazon_cronos).
+#
+# ATENÇÃO: Ext_Speaker_Amp_Switch é INVERTIDO neste aparelho:
+#   Off = pino 35 em nível baixo = amplificador LIGADO;  On = amplificador MUTADO.
+#
+# Uso: audio-speaker [volume 0-39]   (padrão: o salvo, ou 22)
+#      audio-speaker mute | unmute | off | apply
+# O alto-falante só fica ligado se o usuário não o silenciou E não há fone no P2 (o serviço lsjack chama "apply" ao plugar/desplugar).
+STATE=/var/lib/luizinhoshowos/volume
+MUTED=/run/luizinhoshowos/speaker-muted
+JACK=${LSJACK_STATE:-/sys/class/switch/h2w/state}
+c() { amixer -q -c0 cset name="$1" -- "$2" 2>/dev/null || echo "falhou: $1" >&2; }
+apply() {
+  if [ -e "$MUTED" ] || [ "$(cat "$JACK" 2>/dev/null || echo 0)" != 0 ]; then c Ext_Speaker_Amp_Switch On; else c Ext_Speaker_Amp_Switch Off; fi
+}
+case "$1" in
+  mute|off) mkdir -p "$(dirname "$MUTED")"; : > "$MUTED"; apply; exit 0 ;;
+  unmute)   rm -f "$MUTED"; apply; exit 0 ;;
+  apply)    apply; exit 0 ;;
+esac
+VOL=${1:-$(cat "$STATE" 2>/dev/null || echo 22)}
+mkdir -p "$(dirname "$STATE")" && echo "$VOL" > "$STATE"
+# MediaTek: pinos do I2S1 em modo I2S e saída I2S0DL1 em alta definição
+c Audio_I2S1_Setting On;              c Audio_I2S0dl1_hd_Switch On
+# RT5616: DAC -> mixers (mono: L+R nos dois lados) -> OUTVOL -> LOUT
+c 'DAC MIXL INF1 Switch' 1;           c 'DAC MIXR INF1 Switch' 1
+c 'Stereo DAC MIXL DAC L1 Switch' 1;  c 'Stereo DAC MIXL DAC R1 Switch' 1
+c 'Stereo DAC MIXR DAC L1 Switch' 1;  c 'Stereo DAC MIXR DAC R1 Switch' 1
+c 'OUT MIXL DAC L1 Switch' 1;         c 'OUT MIXR DAC R1 Switch' 1
+c 'LOUT MIX DAC L1 Switch' 0;         c 'LOUT MIX DAC R1 Switch' 0
+c 'LOUT MIX OUTVOL L Switch' 1;       c 'LOUT MIX OUTVOL R Switch' 1
+c 'OUT Channel Switch' 1,1;           c 'OUT Playback Switch' 1,1
+c 'OUT Playback Volume' $VOL,$VOL;    c 'DAC1 Playback Volume' 159,159   # -6 dB: folga para a soma L+R
+# fone (P2): mantém o caminho HP ligado também
+c 'HPO MIX DAC1 Switch' 1;            c 'HPVOL Playback Switch' 1,1
+c 'HP Playback Switch' 1,1;           c 'HP Playback Volume' $VOL,$VOL
+# amplificador do alto-falante: Off = LIGADO (invertido!), a menos que haja fone ou o usuário tenha silenciado
+rm -f "$MUTED"
+apply

@@ -1,0 +1,7 @@
+
+  TarsOS 0.2.0 "Companheiro"
+  Linux nativo no Echo Show 5 (1a geracao)
+
+  baseado em postmarketOS (Nura edge) e Alpine Linux - kernel Linux 4.9.77
+  comandos: showos (info)  to-recovery (TWRP)  to-fastboot (fastboot liberado)
+

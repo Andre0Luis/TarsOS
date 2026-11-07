@@ -1,0 +1,6 @@
+#!/bin/sh
+# Reinicia no TWRP gravando o comando de bootloader "boot-recovery" na MISC (p8).
+# A MISC não é crítica (não é lk/preloader/tee).
+MISC=/dev/disk/by-partlabel/MISC
+[ -e "$MISC" ] || MISC=/dev/mmcblk0p8
+printf 'boot-recovery\0\0\0' | dd of="$MISC" bs=16 count=1 conv=notrunc 2>/dev/null && sync && reboot
