@@ -1,0 +1,116 @@
+name: Release
+
+# A cada merge na main (depois do CI passar):
+#   - "edge": pré-release contínua, sempre com o último commit da main (substituída a cada merge);
+#   - "vX.Y.Z": release estável, criada quando o arquivo VERSION traz um número que ainda não tem tag.
+# Para lançar uma versão estável: mude o VERSION num PR e faça o merge. Veja CONTRIBUTING.md.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# um release por vez, sem cancelar o que está em andamento
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    name: Empacotar e publicar
+    needs: ci
+    if: github.event.repository.fork == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write          # criar release e tag
+      id-token: write          # atestado de procedência (assinatura sem chave)
+      attestations: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Dependências do empacotamento
+        run: pip install pillow
+
+      - name: Versão
+        id: ver
+        run: |
+          v=$(tr -d '[:space:]' < VERSION)
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "short=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --tags origin "refs/tags/v$v" >/dev/null 2>&1; then
+            echo "new=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "new=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Empacotar (edge)
+        run: tools/build_release.sh --edge dist/edge
+
+      - name: Empacotar (estável)
+        if: steps.ver.outputs.new == 'true'
+        run: tools/build_release.sh dist/stable
+
+      - name: Atestado de procedência dos arquivos
+        continue-on-error: true
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            dist/*/*.tar.gz
+            dist/*/MANIFEST.txt
+
+      - name: Publicar release estável (vX.Y.Z)
+        if: steps.ver.outputs.new == 'true'
+        run: |
+          gh release create "v${{ steps.ver.outputs.version }}" dist/stable/* \
+            --target "$GITHUB_SHA" \
+            --title "TarsOS v${{ steps.ver.outputs.version }}" \
+            --generate-notes \
+            --latest
+
+      - name: Publicar pré-release contínua (edge)
+        run: |
+          {
+            echo "Build contínuo da \`main\` no commit \`${{ steps.ver.outputs.short }}\` (${GITHUB_SHA})."
+            echo "Esta pré-release é **substituída a cada merge**. Para uma versão fixa, use a release estável (vX.Y.Z)."
+            echo
+            echo "### Últimas mudanças"
+            git log -10 --pretty='- %s (%h)'
+            echo
+            echo "### Como usar"
+            echo "- **\`tarsos-<versão>.tar.gz\`**: pacote completo. Descompacte e rode \`tools/deploy.sh --all\` (veja \`docs/INSTALL.md\`)."
+            echo "- **\`tarsos-overlay-<versão>.tar.gz\`**: só o sistema de arquivos do Echo: \`ssh root@IP 'tar -C / -xzf -' < tarsos-overlay-*.tar.gz\`."
+            echo "- **\`SHA256SUMS\`** e **\`MANIFEST.txt\`**: conferência (\`sha256sum -c SHA256SUMS\`)."
+            echo "- Procedência: \`gh attestation verify <arquivo> --repo ${GITHUB_REPOSITORY}\`."
+            echo
+            echo "> Isto **não é uma imagem de boot**: o kernel e o desbloqueio (amonet) vêm do postmarketOS e de você. Leia o README antes de gravar qualquer coisa."
+          } > edge-notes.md
+          gh release delete edge --cleanup-tag --yes || true
+          gh release create edge dist/edge/* \
+            --target "$GITHUB_SHA" \
+            --prerelease \
+            --title "TarsOS edge (${{ steps.ver.outputs.short }})" \
+            --notes-file edge-notes.md
+
+      - name: Resumo
+        run: |
+          {
+            echo "### TarsOS"
+            echo "- commit: \`${GITHUB_SHA::7}\`"
+            echo "- edge: atualizada"
+            echo "- estável v${{ steps.ver.outputs.version }}: ${{ steps.ver.outputs.new == 'true' && 'publicada agora' || 'já existia (mude o VERSION para lançar outra)' }}"
+          } >> "$GITHUB_STEP_SUMMARY"

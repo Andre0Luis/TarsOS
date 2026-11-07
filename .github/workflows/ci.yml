@@ -1,0 +1,66 @@
+name: CI
+
+# Roda nos pull requests, à mão e dentro do workflow de release (workflow_call), então todo merge na main
+# só vira release depois de passar por aqui.
+on:
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verificar (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Sintaxe (Python, sh e bash)
+        run: |
+          python -m compileall -q rootfs-overlay tools tests
+          status=0
+          for f in $(git ls-files 'tools/*' 'rootfs-overlay/etc/init.d/*' 'rootfs-overlay/etc/local.d/*' 'rootfs-overlay/usr/local/bin/*'); do
+            [ -L "$f" ] && continue
+            case "$(head -1 "$f")" in
+              *python*)            python -m py_compile "$f" || status=1 ;;
+              *bash*)              bash -n "$f" || status=1 ;;
+              *openrc-run*|*/sh*)  sh -n "$f" || status=1 ;;
+            esac
+          done
+          exit $status
+
+      - name: ShellCheck (só avisa)
+        continue-on-error: true
+        run: |
+          files=$(git ls-files 'tools/*.sh' 'rootfs-overlay/etc/local.d/*' 'rootfs-overlay/usr/local/bin/*' | while read -r f; do
+            [ -L "$f" ] || { head -1 "$f" | grep -q 'sh' && echo "$f"; }
+          done)
+          shellcheck -S warning -s sh $(echo "$files" | grep -v 'tools/.*\.sh$') || true
+          shellcheck -S warning -s bash $(echo "$files" | grep 'tools/.*\.sh$') || true
+
+      - name: Políticas do repositório (SPDX, segredos, arquivos proibidos)
+        run: python tools/check_repo.py
+
+      - name: Testes
+        run: python -W ignore::ResourceWarning -m unittest discover -s tests -v
+
+      - name: Empacotamento (teste de fumaça)
+        if: matrix.python == '3.12'
+        run: |
+          pip install pillow
+          tools/build_release.sh --edge "$RUNNER_TEMP/dist"
+          cd "$RUNNER_TEMP/dist"
+          sha256sum -c SHA256SUMS
+          tar -tzf tarsos-overlay-*.tar.gz | grep -q 'usr/share/luizinhoshowos/splash.raw'
+          tar -tzf tarsos-overlay-*.tar.gz | grep -q 'usr/local/lib/luizinhoshowos/lsdesk.py'

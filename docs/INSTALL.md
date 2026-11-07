@@ -168,6 +168,8 @@ A voz local usa a biblioteca `libpiper` (repositório *edge/testing* do Alpine; 
 
 > ⚠️ Nos repositórios do Alpine existe um pacote chamado **`piper`** que **não é** a síntese de voz (é um configurador de mouse gamer). O TTS é o `libpiper`.
 
+**Opção B, sem git:** baixe o `tarsos-<versão>.tar.gz` em [Releases](https://github.com/Andre0Luis/TarsOS/releases) (a `edge` é o último commit; as `vX.Y.Z` são as estáveis), confira com `sha256sum -c SHA256SUMS`, descompacte e rode `tools/deploy.sh --all` de dentro da pasta. Ou, só com o sistema de arquivos do Echo: `ssh root@IP 'tar -C / -xzf -' < tarsos-overlay-<versão>.tar.gz` (depois ative os serviços com `rc-update add <serviço> default`; o `deploy.sh` faz isso por você).
+
 Reinicie o Echo (ou `rc-service lsdesk restart`). A tela inicial do TarsOS aparece; abra o app **TARS** e fale.
 
 ## 6. Opcionais

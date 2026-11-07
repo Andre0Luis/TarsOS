@@ -73,6 +73,19 @@ ev = threading.Event(); out = {}
 b.ask('que horas são?', '', lambda r, e: (out.update(r=r, e=e), ev.set())); ev.wait(60); print(out)
 ```
 
+## Testes, CI e releases
+
+```bash
+python3 -W ignore::ResourceWarning -m unittest discover -s tests -v   # 32 testes, só biblioteca padrão
+python3 tools/check_repo.py                                           # SPDX, segredos, arquivos proibidos, IPs privados, partições
+```
+
+- **CI** (`.github/workflows/ci.yml`): roda em todo PR (Python 3.12 e 3.13): sintaxe, políticas do repositório, testes e um teste de fumaça do empacotamento. PR vermelho não entra.
+- **Release** (`.github/workflows/release.yml`): a cada merge na `main`, depois do CI, publica a pré-release **`edge`** (substituída a cada merge) com os arquivos de `tools/build_release.sh`. Se o arquivo **`VERSION`** tiver um número novo (sem tag `vX.Y.Z`), publica também a **release estável** com notas geradas dos commits.
+- **Lançar uma versão estável:** num PR, mude o `VERSION` (`MAJOR.MINOR.PATCH`, por exemplo `0.3.0`) e, se quiser, o codinome em `rootfs-overlay/etc/luizinhoshowos-release`. Quando o PR entrar na `main`, a release sai sozinha. Use commits `feat(...)`, `fix(...)` para as notas ficarem boas.
+- **Antes de abrir o PR**, rode os dois comandos acima e, se mexeu no empacotamento, `tools/build_release.sh --edge /tmp/dist` (precisa de Pillow).
+- Segurança do portão do TARS: se mexer em `lstools.classify`, **acrescente casos em `tests/test_classify.py`**. Esses testes existem porque o portão já teve contornos reais.
+
 ## Estilo de código
 
 - **Python primeiro, biblioteca padrão primeiro.** O aparelho tem 1 GB de RAM e `apk` como gerenciador. Dependências novas precisam de pacote `apk` ou de um bom motivo.

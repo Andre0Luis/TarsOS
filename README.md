@@ -16,6 +16,8 @@
 ![Plataforma](https://img.shields.io/badge/hardware-Echo%20Show%205%20(1%C2%AA%20gera%C3%A7%C3%A3o)-orange)
 ![Base](https://img.shields.io/badge/base-postmarketOS%20%2F%20Alpine-0a6c74)
 ![Linguagem](https://img.shields.io/badge/c%C3%B3digo-Python%203-3776ab)
+[![Release](https://img.shields.io/github/v/release/Andre0Luis/TarsOS?include_prereleases&label=release)](https://github.com/Andre0Luis/TarsOS/releases)
+[![Build](https://github.com/Andre0Luis/TarsOS/actions/workflows/release.yml/badge.svg)](https://github.com/Andre0Luis/TarsOS/actions/workflows/release.yml)
 
 [Instalar](docs/INSTALL.md) · [Arquitetura](docs/ARCHITECTURE.md) · [O TARS](docs/TARS.md) · [Hardware](docs/HARDWARE.md) · [Contribuir](CONTRIBUTING.md) · [Diário do projeto](docs/PROJECT-LOG.md)
 
@@ -111,7 +113,9 @@ O caminho completo, com comandos, está em **[docs/INSTALL.md](docs/INSTALL.md)*
    ```
 7. Diga **"TARS"**.
 
-> Ainda **não há imagem pronta** para baixar: o kernel e os drivers vêm do postmarketOS e o desbloqueio depende de você. Um script de build reproduzível é uma das [metas](#roadmap).
+**Sem git?** Cada merge na `main` gera uma release em [Releases](https://github.com/Andre0Luis/TarsOS/releases): a **`edge`** (sempre o último commit) e as estáveis **`vX.Y.Z`**. O pacote `tarsos-<versão>.tar.gz` já traz a tela de boas-vindas gerada; descompacte e rode `tools/deploy.sh --all`. Os arquivos têm `SHA256SUMS` e atestado de procedência (`gh attestation verify`).
+
+> Ainda **não há imagem de boot pronta** para baixar: o kernel e os drivers vêm do postmarketOS e o desbloqueio depende de você. Um script de build reproduzível é uma das [metas](#roadmap).
 
 ## Como funciona
 
