@@ -1,4 +1,6 @@
 #!/usr/bin/python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 """TarsOS: mixador de áudio do Echo Show 5.
 
 O driver de som da MediaTek (I2S0DL1) aceita UM cliente por vez, não tem mmap (o dmix do ALSA não funciona)

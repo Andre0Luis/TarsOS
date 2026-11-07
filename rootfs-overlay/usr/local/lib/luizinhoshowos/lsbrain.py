@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 """TarsOS: o "cérebro" do TARS (Gemini via API REST).
 
 - Personalidade: TARS, o robô de Interestelar, em português do Brasil.

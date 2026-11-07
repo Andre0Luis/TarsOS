@@ -1,4 +1,6 @@
 #!/sbin/openrc-run
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 # TarsOS: receptor AirPlay (shairport-sync) supervisionado: se cair, volta sozinho.
 name="AirPlay (shairport-sync)"
 supervisor=supervise-daemon

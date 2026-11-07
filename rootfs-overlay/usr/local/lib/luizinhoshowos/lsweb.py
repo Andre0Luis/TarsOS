@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 """TarsOS: motor do navegador (modo leitura) e dos feeds de notícias. Só biblioteca padrão.
 
 Não há motor de JavaScript nem de CSS: a página vira uma lista de blocos de texto (títulos, parágrafos, itens, citações)

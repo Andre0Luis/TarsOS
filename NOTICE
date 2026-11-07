@@ -1,0 +1,79 @@
+TarsOS
+Copyright 2026 The TarsOS Authors
+
+The TarsOS Authors: André Luis (initial author) and everyone who contributes to
+https://github.com/Andre0Luis/TarsOS (see the git history).
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+Each source file carries an SPDX-License-Identifier header. Contributions are
+accepted under the same license (see CONTRIBUTING.md).
+
+----------------------------------------------------------------------------
+Terceiros / Third-party notices
+----------------------------------------------------------------------------
+Este repositório contém somente código e documentação do TarsOS. Nenhum dos
+componentes abaixo é redistribuído aqui: o usuário os obtém das fontes
+originais (o `tools/provision.sh` instala pelo apk/pip e baixa os modelos
+depois de pedir confirmação). Cada um mantém a SUA licença; consulte-a antes
+de redistribuir uma imagem pronta do sistema.
+This repository contains only TarsOS code and documentation. None of the
+components below is redistributed here; each keeps its own license.
+
+Componentes de software usados em tempo de execução (licença conforme o
+projeto original; confira a versão instalada):
+
+  Linux kernel (fork linux-amazon-checkers, 4.9.77) ... GPL-2.0
+  postmarketOS / pmaports (porte amazon-checkers) ..... licenças do projeto
+  Alpine Linux e seus pacotes ......................... licenças de cada pacote
+  libpiper / Piper (OHF-Voice/piper1-gpl) ............. GPL-3.0
+  espeak-ng ........................................... GPL-3.0-or-later
+  SoX ................................................. GPL-2.0-or-later (libs LGPL)
+  FFmpeg .............................................. LGPL-2.1-or-later / GPL (conforme a build)
+  Vosk API (Alpha Cephei) ............................. Apache-2.0
+  shairport-sync ...................................... licença permissiva própria (estilo MIT)
+  pyte ................................................ LGPL-3.0
+  python-evdev ........................................ BSD-3-Clause
+  NumPy ............................................... BSD-3-Clause
+  Pillow .............................................. MIT-CMU (HPND)
+  PyChromecast ........................................ MIT
+  tinytuya ............................................ MIT
+  Fontes DejaVu ....................................... licença Bitstream Vera / DejaVu (permissiva)
+
+O TarsOS chama as bibliotecas GPL (libpiper, espeak-ng, SoX, ffmpeg) apenas
+como programas/bibliotecas do sistema instalados pelo usuário; não as inclui
+nem as modifica.
+
+Modelos e vozes (baixados pelo usuário, termos próprios; veja a ficha de cada um):
+
+  Vosk vosk-model-small-pt-0.3 ......... alphacephei.com/vosk/models
+  Piper pt_BR-faber-medium ............. huggingface.co/rhasspy/piper-voices
+                                         (ficha/MODEL_CARD da voz)
+
+Serviços e dados externos (usados com as contas e chaves do próprio usuário):
+
+  Google Gemini API ........ texto, transcrição e voz; sujeito aos termos do Google
+  Open-Meteo ............... dados do clima, CC BY 4.0 (https://open-meteo.com),
+                             uso gratuito apenas não comercial: "Weather data by Open-Meteo.com"
+  DuckDuckGo (HTML) ........ busca do navegador
+  Feeds RSS (G1, BBC Brasil, Tecnoblog, DW, ge) ... somente manchetes para exibição
+                             pessoal; o conteúdo pertence aos respectivos veículos
+  Spotify Web API, Tuya Cloud (apenas no tuya-sync), Home Assistant ... com a conta do usuário
+
+Projetos de referência (não incluídos; não redistribuídos):
+
+  amonet (Rortiz2, k4y0z, bengris32, xyz e colaboradores) ... exploit de desbloqueio,
+      com licença própria: https://github.com/bengris32/amonet
+
+----------------------------------------------------------------------------
+Marcas e direitos de terceiros
+----------------------------------------------------------------------------
+"Amazon", "Echo", "Echo Show" e "Alexa" são marcas da Amazon.com, Inc., usadas
+somente para identificar o hardware. TarsOS não é afiliado, patrocinado nem
+endossado pela Amazon.
+
+O TARS é uma homenagem de fã ao robô do filme "Interestelar" (2014). O nome e o
+personagem pertencem aos seus donos; este repositório não contém material do
+filme. TarsOS não é afiliado à Warner Bros., à Legendary nem à Syncopy.
+
+A licença Apache-2.0 não concede direito de uso dos nomes, logotipos e marcas
+do projeto, exceto para descrever a origem do software (Apache-2.0, seção 6).

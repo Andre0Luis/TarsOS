@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 """Gera a tela de boas-vindas do TarsOS como framebuffer cru RGBA 480x960.
 A tela física é paisagem 960x480 e o painel é retrato: rotação 270 deixa na orientação certa."""
 import sys

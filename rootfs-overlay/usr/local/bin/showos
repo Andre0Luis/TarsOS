@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 # Mostra a identificação do TarsOS e o estado do sistema.
 . /etc/luizinhoshowos-release
 echo "$PRETTY_NAME"

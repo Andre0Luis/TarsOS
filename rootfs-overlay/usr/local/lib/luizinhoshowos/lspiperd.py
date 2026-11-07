@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 """TarsOS: serviço da voz local (Piper). Carrega o modelo UMA vez (leva ~17 s neste processador) e atende o tars-say
 pelo socket /run/lspiper.sock. Protocolo: o cliente manda o texto em UTF-8 terminado em \\n; o serviço responde com blocos
 [taxa u32][tamanho u32][PCM s16le mono], um por frase, e termina com um bloco de tamanho 0."""

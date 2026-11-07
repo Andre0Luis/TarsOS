@@ -1,4 +1,6 @@
 #!/sbin/openrc-run
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 # TarsOS Desktop: área de trabalho no framebuffer (substitui o lsterm).
 name="TarsOS Desktop"
 supervisor=supervise-daemon

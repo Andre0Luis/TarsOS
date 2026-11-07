@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 """Roda comandos no shell root do EchoLinux pela serial USB (CDC-ACM).
 Uso: echosh.py 'comando'   (ou sem args: lê comandos do stdin)"""
 import glob, sys, time, serial, uuid

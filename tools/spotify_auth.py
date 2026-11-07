@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 """Autoriza o TarsOS na Web API do Spotify (OAuth PKCE, sem client secret).
 Abre o login do Spotify no navegador do Mac, captura o código em http://127.0.0.1:8899/callback,
 troca por tokens e grava o refresh token no Echo (/etc/luizinhoshowos/spotify-api.json, modo 600)."""

@@ -1,4 +1,6 @@
 #!/sbin/openrc-run
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 # TarsOS: Web API do Spotify (tocando agora + controle) para o player da tela.
 name="Spotify Web API"
 supervisor=supervise-daemon

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 """TarsOS: mostra ou troca a linha de comando do kernel (cmdline) dentro de um boot.img Android.
 
 Por que existe: o LK do Echo Show 5 (checkers) injeta ~840 caracteres no cmdline e o kernel ARM aceita 1024. O cmdline

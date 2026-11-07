@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 # Reinicia no TWRP gravando o comando de bootloader "boot-recovery" na MISC (p8).
 # A MISC não é crítica (não é lk/preloader/tee).
 MISC=/dev/disk/by-partlabel/MISC

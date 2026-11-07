@@ -1,4 +1,6 @@
 #!/usr/bin/python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 """Cliente do lsaudiod: copia PCM cru (S16_LE, 48 kHz, estéreo) da entrada padrão para o mixador."""
 import socket, sys, time
 s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)

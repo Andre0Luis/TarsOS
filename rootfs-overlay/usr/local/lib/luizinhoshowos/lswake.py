@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 """TarsOS: detector LOCAL da palavra de ativação ("TARS"), com o Vosk (Kaldi) rodando no próprio Echo.
 
 O áudio de cada trecho de fala passa por aqui ANTES de qualquer coisa ir à nuvem: se o nome não for ouvido localmente,

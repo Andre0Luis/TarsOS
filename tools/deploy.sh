@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 # TarsOS: envia o rootfs-overlay para o Echo pelo SSH (sem regravar a imagem).
 #
 # Uso:  tools/deploy.sh [--all] [--no-restart] [--audio] [IP]

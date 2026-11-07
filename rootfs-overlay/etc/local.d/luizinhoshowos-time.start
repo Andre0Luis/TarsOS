@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 # O Echo não tem bateria de RTC: ao perder energia o relógio volta para 2009.
 # Sincroniza pela internet assim que houver rede (em segundo plano, sem atrasar o boot).
 (

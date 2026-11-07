@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 # TarsOS: troca automática alto-falante <-> fone. O driver ACCDET expõe o estado do P2 em /sys/class/switch/h2w/state
 # (0 = nada, 1 = fone com microfone, 2 = fone sem microfone). Ao mudar, pede ao audio-speaker para recalcular o amplificador.
 JACK=${LSJACK_STATE:-/sys/class/switch/h2w/state}

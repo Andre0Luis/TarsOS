@@ -108,6 +108,15 @@ Use o modelo de issue. Ajuda muito: versão do TarsOS (`showos`), o trecho de `/
 
 O projeto é [Apache-2.0](LICENSE). Ao enviar um PR você concorda em licenciar a sua contribuição sob os mesmos termos.
 
+**Arquivos novos** de código (`.py`, `.sh`, serviços OpenRC, `Dockerfile`) levam este cabeçalho logo depois do `#!` (se houver):
+
+```
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
+```
+
+Se você traz código ou dados de **outro projeto**, diga de onde veio e qual é a licença no PR, e acrescente a linha no [NOTICE](NOTICE). Não traga nada com licença incompatível com a Apache-2.0 (por exemplo, GPL copiada para dentro dos nossos arquivos).
+
 ---
 
 *Every second counts.* Obrigado por gastar alguns dos seus aqui.

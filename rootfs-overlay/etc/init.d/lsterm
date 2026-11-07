@@ -1,4 +1,6 @@
 #!/sbin/openrc-run
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 # TarsOS Terminal: terminal com teclado touch no framebuffer.
 name="TarsOS Terminal"
 supervisor=supervise-daemon

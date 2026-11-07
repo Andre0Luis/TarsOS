@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 """TarsOS: casa inteligente pela rede local, sem conta e sem nuvem.
 
 Drivers que falam o protocolo LOCAL de cada fabricante (a mesma rede onde o Google Home enxerga os aparelhos):

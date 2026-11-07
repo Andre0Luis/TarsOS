@@ -203,6 +203,7 @@ TarsOS é montado sobre ombros gigantes:
 - **[postmarketOS](https://postmarketos.org)** e **[Alpine Linux](https://alpinelinux.org)**: o porte `amazon-checkers`, o kernel, o Wi-Fi e a base inteira. Veja a [página do aparelho na wiki](https://wiki.postmarketos.org/wiki/Amazon_Echo_Show_5_(amazon-checkers)).
 - **[Vosk](https://alphacephei.com/vosk/)** (reconhecimento local), **[Piper](https://github.com/OHF-Voice/piper1-gpl)** (voz local), **[Google Gemini](https://ai.google.dev)** (cérebro e voz na nuvem).
 - **[shairport-sync](https://github.com/mikebrady/shairport-sync)**, **[pychromecast](https://github.com/home-assistant-libs/pychromecast)**, **[tinytuya](https://github.com/jasonacox/tinytuya)**, **[Pillow](https://python-pillow.org)**, **[pyte](https://github.com/selectel/pyte)**, **[python-evdev](https://github.com/gvalkov/python-evdev)**, fontes DejaVu.
+- **[Open-Meteo](https://open-meteo.com)**: dados do clima (CC BY 4.0, uso gratuito não comercial). *Weather data by Open-Meteo.com.*
 - O **TARS** é uma homenagem de fã ao robô do filme *Interestelar* (2014). Os sliders de humor e honestidade são a melhor ideia do roteiro.
 
 ## Aviso legal
@@ -213,7 +214,7 @@ nenhum material do filme. Modificar o bootloader pode danificar o aparelho de fo
 
 ## Licença
 
-[Apache License 2.0](LICENSE). Componentes de terceiros mantêm as próprias licenças; as vozes e os modelos baixados pelo `provision.sh` têm termos próprios (confira a ficha de cada um).
+[Apache License 2.0](LICENSE), com `SPDX-License-Identifier: Apache-2.0` em cada arquivo de código. O arquivo [NOTICE](NOTICE) lista os componentes de terceiros e as respectivas licenças: eles **não** são redistribuídos aqui e mantêm os próprios termos, e as vozes e os modelos baixados pelo `provision.sh` também (confira a ficha de cada um).
 
 ---
 

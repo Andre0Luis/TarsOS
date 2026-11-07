@@ -1,4 +1,6 @@
 #!/sbin/openrc-run
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 # TarsOS: voz local do TARS (Piper), carregada uma vez na memória.
 name="TarsOS Piper"
 supervisor=supervise-daemon

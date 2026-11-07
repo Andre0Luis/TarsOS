@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 # Prompt do TarsOS
 if [ "$(id -u)" = 0 ]; then PS1='\[\e[1;33m\]tarsos\[\e[0m\]:\w# '; else PS1='\[\e[1;33m\]tarsos\[\e[0m\]:\w$ '; fi
 

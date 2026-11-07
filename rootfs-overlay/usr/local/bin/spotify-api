@@ -1,4 +1,6 @@
 #!/usr/bin/python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 """TarsOS: ponte com a Web API do Spotify.
 - Lê /etc/luizinhoshowos/spotify-api.json (client_id + refresh_token, criado pelo spotify_auth.py)
 - A cada ~2 s pergunta "o que está tocando?" e grava /run/luizinhoshowos/spotify.json para o player

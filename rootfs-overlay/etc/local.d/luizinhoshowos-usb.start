@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 # TarsOS: expõe uma porta serial USB (CDC-ACM) no lugar do RNDIS,
 # porque o macOS não suporta RNDIS. O shell root roda em ttyGS0 (inittab).
 G=/sys/class/android_usb/android0

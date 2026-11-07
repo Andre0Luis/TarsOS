@@ -1,4 +1,6 @@
 #!/usr/bin/python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 """TarsOS: baixa as chaves locais dos aparelhos Tuya/Smart Life da sua conta (iot.tuya.com) para o TARS.
 
 Uso (no terminal do Echo):  tuya-sync

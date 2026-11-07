@@ -1,4 +1,6 @@
 #!/usr/bin/python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 """Lê o pipe de metadados do shairport-sync e grava /run/luizinhoshowos/airplay.json
 (título, artista, álbum, capa, estado e progresso) para o player da área de trabalho."""
 import base64, json, os, re, stat, time

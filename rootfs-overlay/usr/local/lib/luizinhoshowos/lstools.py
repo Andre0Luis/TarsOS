@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 """TarsOS: ferramentas do TARS (function calling do Gemini).
 
 Rodam dentro da área de trabalho (como root), mas os COMANDOS DE SHELL que o modelo pede rodam como o usuário

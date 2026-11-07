@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 """TarsOS: escuta pelo array de microfones do Echo Show 5.
 
 O codec TLV320AIC3101 entrega no PCM hw:0,22 apenas S24_3LE, 4 canais, 16 kHz (os canais 1 e 2 têm os

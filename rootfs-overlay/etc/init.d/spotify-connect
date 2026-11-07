@@ -1,4 +1,6 @@
 #!/sbin/openrc-run
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 # TarsOS: Spotify Connect (librespot). O Echo aparece como caixa de som
 # "TarsOS" no app do Spotify (precisa de conta Premium) e toca no alto-falante.
 name="Spotify Connect"

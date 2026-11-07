@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 # Grava a chave da API do Gemini no Echo (arquivo só do root, modo 600).
 # Crie a chave em https://aistudio.google.com/apikey  ·  uso: tools/set_gemini_key.sh [ip-do-echo]
 # Variáveis: TARSOS_HOST (padrão tarsos.local), TARSOS_KEY (padrão keys/tarsos_ed25519 ou keys/luizinhoshowos_ed25519).

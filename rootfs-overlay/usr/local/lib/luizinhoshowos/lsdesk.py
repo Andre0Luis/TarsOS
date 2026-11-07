@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 """TarsOS Desktop: área de trabalho no framebuffer do Echo Show 5.
 
 O kernel não tem fbcon nem DRM, então este processo é o "servidor gráfico":

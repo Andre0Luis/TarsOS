@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 # TarsOS: AirPlay -> sox (44,1 -> 48 kHz) -> lsaudiod (mixador) -> alto-falante.
 #
 # 1) O driver da MediaTek (mtk_pcm_I2S0dl1_copy) arredonda cada escrita para múltiplos de 64 bytes

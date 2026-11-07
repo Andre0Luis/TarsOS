@@ -1,4 +1,6 @@
 #!/sbin/openrc-run
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 # TarsOS: mixador de áudio (único dono do alto-falante).
 name="TarsOS Audio"
 supervisor=supervise-daemon

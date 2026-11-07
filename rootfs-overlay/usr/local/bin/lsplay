@@ -1,3 +1,5 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 # Toca qualquer arquivo de áudio (wav, mp3, ogg...) pelo mixador. Uso: lsplay arquivo [volume 0.0-2.0]
 exec /usr/bin/sox -q "$1" -t raw -r 48000 -e signed -b 16 -c 2 - vol "${2:-1.0}" 2>/dev/null | /usr/local/bin/lsaudio-play

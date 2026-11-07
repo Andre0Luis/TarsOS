@@ -1,4 +1,6 @@
 #!/sbin/openrc-run
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 # TarsOS: lê os metadados do AirPlay (shairport-sync) para o player na tela.
 name="AirPlay metadados"
 supervisor=supervise-daemon

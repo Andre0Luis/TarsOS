@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 # Desenha a tela de boas-vindas do TarsOS no framebuffer (RGBA 480x960).
 S=/usr/share/luizinhoshowos/splash.raw
 [ -e /dev/fb0 ] && [ -e "$S" ] && cat "$S" > /dev/fb0

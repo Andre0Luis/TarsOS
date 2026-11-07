@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 # TarsOS: prepara um Echo Show 5 que já roda postmarketOS (primeiro boot feito).
 # Rode NO Echo, como root, com internet:   sh provision.sh [--yes] [--no-models]
 # Ou do computador:                         ssh root@IP 'sh -s' < tools/provision.sh

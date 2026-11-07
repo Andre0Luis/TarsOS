@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 # TarsOS: liga o alto-falante do Echo Show 5 (1a geração).
 # Cadeia: DL1 -> I2S1 (pinos 72-74) -> RT5616 (hw:0,23) -> LOUT diferencial -> amplificador externo.
 # Receita tirada do audio_device_rt5616.xml do Android (amazon-oss/android_vendor_amazon_cronos).

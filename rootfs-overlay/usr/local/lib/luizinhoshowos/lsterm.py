@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 """TarsOS Terminal: terminal com teclado touch direto no framebuffer.
 
 O kernel do Echo Show 5 não tem fbcon, então este programa faz tudo sozinho:

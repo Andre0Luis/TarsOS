@@ -1,4 +1,6 @@
 #!/sbin/openrc-run
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 # TarsOS: troca automática alto-falante <-> fone (P2).
 name="TarsOS Jack"
 supervisor=supervise-daemon

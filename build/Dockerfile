@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 FROM debian:trixie-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
       git python3 openssl ca-certificates sudo util-linux kpartx procps \

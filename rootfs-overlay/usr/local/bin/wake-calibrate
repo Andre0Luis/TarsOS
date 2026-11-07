@@ -1,4 +1,6 @@
 #!/usr/bin/python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 """Calibração do detector local de "TARS": grava amostras da sua voz (com um "ding" antes de cada uma), salva em
 /var/lib/luizinhoshowos/wake-samples/ e decodifica cada uma de várias formas, para escolher as palavras certas.
 Uso: wake-calibrate [gravar|analisar]   (sem argumento faz os dois)"""

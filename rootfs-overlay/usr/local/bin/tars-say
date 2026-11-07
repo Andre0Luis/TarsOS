@@ -1,4 +1,6 @@
 #!/usr/bin/python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 """TarsOS: a voz do TARS.
 
 Fala um texto em português com a voz "Orus" do Gemini TTS (gemini-3.8-flash-tts), frase por frase:

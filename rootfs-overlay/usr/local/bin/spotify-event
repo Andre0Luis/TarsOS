@@ -1,4 +1,6 @@
 #!/usr/bin/python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 """Gancho --onevent do librespot: grava o estado do Spotify em /run/luizinhoshowos/spotify.json
 para a área de trabalho (app Spotify) mostrar a música atual."""
 import json, os, time

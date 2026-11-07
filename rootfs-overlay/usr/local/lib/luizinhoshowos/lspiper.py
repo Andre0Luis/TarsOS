@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 The TarsOS Authors
 """TarsOS: voz local do TARS com o Piper (síntese neural, open source, 100% no aparelho) via libpiper/ctypes.
 
 Substitui o espeak-ng (metálico) quando o Gemini TTS não está disponível. Modelo: /opt/piper-voices/pt_BR-faber-medium.onnx.
